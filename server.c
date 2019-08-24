@@ -50,7 +50,7 @@ int procResponse(int fd_cliesock, unsigned char buf[], int len)
                                         "Upgrade: websocket\r\n"
                                         "Connection: Upgrade\r\n"
                                         "Sec-WebSocket-Accept: ";
-    printf("%s", buf);
+
     if (ptr_buf = strstr(buf, "Sec-WebSocket-Key: "))
     {
         sscanf(ptr_buf, "Sec-WebSocket-Key: %s\r\n", key_recv);
