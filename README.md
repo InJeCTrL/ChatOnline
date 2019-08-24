@@ -4,15 +4,15 @@
 - Fin
 - Reserved
 - Opcode
-- Mask:<font color=red>True</font>
+- Mask:**True**
 - Payload length
-- <font color=Red>masking-key</font>
-- <font color=red>masked payload</font>
+- **masking-key**
+- **masked payload**
 
 ### S2C
 - Fin
 - Reserved
 - Opcode
-- Mask:<font color=red>False</font>
+- Mask:**False**
 - Payload length
-- <font color=red>payload</font>
+- **payload**
