@@ -95,7 +95,7 @@
 		websocket.onmessage = function(event)
 		{
 			var lastmsg = jQuery.parseJSON(event.data);
-			$('#msg').append("<table width='100%'><tr><td align='top' width='1px'>" + lastmsg['n'] + "：</td><td>" + lastmsg['t'] + "</td></tr></table>");
+			$('#msg').append("<table width='100%'><tr><td align='top' style='white-space:nowrap;width: 5% ;'>" + lastmsg['n'] + "：</td><td>" + lastmsg['t'] + "</td></tr></table>");
 			$('#msg')[0].scrollTo(0,$('#msg')[0].scrollHeight);
 		}
 	}

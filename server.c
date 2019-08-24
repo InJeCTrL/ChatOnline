@@ -93,6 +93,7 @@ void* procRequest(void *data)
         }
         if ((len_recv = recv(fd_client, &mask_len_payload, 1, 0)) > 0)
         {
+            mask_len_payload &= 0B01111111;
             memcpy(buf + len_buf, &mask_len_payload, 1);
             len_buf++;
             if ((mask_len_payload & 0B01111111) == 126)
@@ -136,8 +137,8 @@ void* procRequest(void *data)
         }
         if ((len_recv = recv(fd_client, MaskingKey, 4, 0)) > 0)
         {
-            memcpy(buf + len_buf, MaskingKey, 4);
-            len_buf += 4;
+            //memcpy(buf + len_buf, MaskingKey, 4);
+            //len_buf += 4;
         }
         else
         {
@@ -147,8 +148,8 @@ void* procRequest(void *data)
         if ((len_recv = recv(fd_client, payload, len_payload, 0)) > 0)
         {
             unsigned char *p = maskPayload(payload, len_payload, MaskingKey);
-            //memcpy(buf + len_buf, p, len_payload);
-            memcpy(buf + len_buf, payload, len_payload);
+            memcpy(buf + len_buf, p, len_payload);
+            //memcpy(buf + len_buf, payload, len_payload);
             len_buf += len_payload;
             free(p);
         }
