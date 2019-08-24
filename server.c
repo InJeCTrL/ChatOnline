@@ -14,6 +14,7 @@
 #include <openssl/buffer.h>
 
 #define BUFFSIZE        8192
+#define MAXPLSIZE       8000
 #define MAXCONN         20
 #define PORT            12345
 #define S_OK            0
@@ -71,11 +72,11 @@ unsigned char* maskPayload(unsigned char *payload, long long len_payload, unsign
 
 void* procRequest(void *data)
 {
-    unsigned char first, opcode, mask_len_payload, ex1_len_payload[2], ex2_len_payload[8], MaskingKey[4], payload[64];
-    long long len_payload;
+    unsigned char first, opcode, mask_len_payload, ex1_len_payload[2], ex2_len_payload[8], MaskingKey[4], payload[MAXPLSIZE];
+    long long len_payload = 0;
     unsigned char buf[BUFFSIZE] = { 0 };
-    int len_recv;
     long long len_buf = 0;
+    ssize_t len_recv;
     int fd_client = *(int*)data;
 
     while (1)
@@ -104,7 +105,7 @@ void* procRequest(void *data)
                     len_buf += 2;
                     len_payload = ex1_len_payload[0];
                     len_payload <<= 8;
-                    len_payload |= ex2_len_payload[1];
+                    len_payload |= ex1_len_payload[1];
                 }
             }
             else if ((mask_len_payload & 0B01111111) == 127)
@@ -124,7 +125,7 @@ void* procRequest(void *data)
             {
                 len_payload = mask_len_payload & 0B01111111;
             }
-            if (len_recv <= 0)
+            if (len_recv <= 0 || (len_payload > MAXPLSIZE))
             {
                 disConnect(fd_client);
                 break;
@@ -147,17 +148,16 @@ void* procRequest(void *data)
         }
         if ((len_recv = recv(fd_client, payload, len_payload, 0)) > 0)
         {
-            unsigned char *p = maskPayload(payload, len_payload, MaskingKey);
-            memcpy(buf + len_buf, p, len_payload);
-            //memcpy(buf + len_buf, payload, len_payload);
-            len_buf += len_payload;
+            unsigned char *p = maskPayload(payload, len_recv, MaskingKey);
+            memcpy(buf + len_buf, p, len_recv);
+            len_buf += len_recv;
             free(p);
         }
         else
         {
             disConnect(fd_client);
             break;
-        }
+        }        
         for (int i = 0; i < MAXCONN; i++)
         {
             if (fds_client[i])
