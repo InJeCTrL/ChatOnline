@@ -4,7 +4,7 @@
 		<meta charset="utf-8" />
 		<title>ChatOnline</title>
 	</head>
-	<script src="https://ajax.aspnetcdn.com/ajax/jquery/jquery-1.6.4.min.js"></script>
+	<script src="http://ajax.aspnetcdn.com/ajax/jquery/jquery-1.6.4.min.js"></script>
 	<body style="background-color: cornflowerblue;">
 		<div style="background-color: aquamarine; width: 100%;text-align: center;font-family: tahoma;font-size: larger;z-index: 9;top: 0px;left: 0px;position: fixed;">
 			<div style="padding: 10px;">
@@ -71,7 +71,7 @@
 				{
 					return ;
 				}
-				wsurl = 'wss://' + $('#addr').val() + ':' + $('#port').val();
+				wsurl = 'ws://' + $('#addr').val() + ':' + $('#port').val();
 				websocket = new WebSocket(wsurl);
 				websocket.onopen = function(event)
 				{
