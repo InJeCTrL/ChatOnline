@@ -50,7 +50,7 @@ int procResponse(int fd_cliesock, unsigned char buf[], int len)
                                         "Upgrade: websocket\r\n"
                                         "Connection: Upgrade\r\n"
                                         "Sec-WebSocket-Accept: ";
-
+    printf("%s", buf);
     if (ptr_buf = strstr(buf, "Sec-WebSocket-Key: "))
     {
         sscanf(ptr_buf, "Sec-WebSocket-Key: %s\r\n", key_recv);
@@ -65,6 +65,7 @@ int procResponse(int fd_cliesock, unsigned char buf[], int len)
     else
     {
         char opcode = buf[0] & 15;
+        printf("[+ %d +]", opcode);
         if (opcode != 8)
         {
             for (int i = 0; i < MAXCONN; i++)

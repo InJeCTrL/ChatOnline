@@ -67,7 +67,11 @@
 			}
 			function conn()
 			{
-				wsurl = 'ws://' + $('#addr').val() + ':' + $('#port').val();
+				if (websocket && websocket.readyState == 1)
+				{
+					return ;
+				}
+				wsurl = 'wss://' + $('#addr').val() + ':' + $('#port').val();
 				websocket = new WebSocket(wsurl);
 				websocket.onopen = function(event)
 				{
