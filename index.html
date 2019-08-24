@@ -9,18 +9,18 @@
 		<div style="background-color: aquamarine; width: 100%;text-align: center;font-family: tahoma;font-size: 20px;z-index: 9;top: 0px;left: 0px;position: fixed;">
 			<div>
 				<table style="margin: auto;width: 60%;">
-					<tr>
+					<tr style="height: 100%;">
 						<td>
 							服务器地址:
 						</td>
 						<td align="left">
 							<input id="addr" name="addr" type="text" style="height: 100%;width: 80%;" />
 						</td>
-						<td rowspan="3">
-							<button id="conn" name="conn" style="height: 50px;width: 100%;background-color: deepskyblue;border-color: blueviolet;border: 2;">连接</button>
+						<td rowspan="3" style="height: 100%;">
+							<button id="conn" name="conn" style="height: 100%;width: 100%;background-color: deepskyblue;border-color: blueviolet;border: 2;">连接</button>
 						</td>
-						<td rowspan="3">
-							<button id="disc" name="disc" style="height: 50px;width: 100%;background-color: orangered;border-color: blueviolet;border: 2;">断开</button>
+						<td rowspan="3" style="height: 100%;">
+							<button id="disc" name="disc" style="height: 100%;width: 100%;background-color: orangered;border-color: blueviolet;border: 2;">断开</button>
 						</td>
 					</tr>
 					<tr>
@@ -43,7 +43,7 @@
 			</div>
 			<label id="st" name="st" style="background-color: red;">未连接到服务器</label>
 		</div>
-		<div name="msg" id="msg" style="overflow: auto; position: fixed;top: 120px;left: 15px;right: 15px;bottom: 20%;background-color: azure;"></div>
+		<div name="msg" id="msg" style="overflow: auto; position: fixed;top: 150px;left: 15px;right: 15px;bottom: 20%;background-color: azure;"></div>
 		<div style="position: absolute;top: 80%;left: 0px;right: 0px;bottom: 0px;background-color: azure;padding: 10px;">
 			<table style="height: 100%;width: 100%;" cellpadding="0" cellspacing="0">
 				<tr style="height: 100%;">
@@ -58,68 +58,68 @@
 		</div>
 	</body>
 </html>
-		<script>
-			var wsurl;
-			var websocket;
-			var nickname;
-			
-			if (typeof WebSocket == 'undefined')
-			{
-				alert("浏览器不支持WebSocket!");
-				window.close();
-			}
-			function conn()
-			{
-				if (websocket && websocket.readyState == 1)
-				{
-					return ;
-				}
-				if (!$('#nickname').val())
-				{
-					alert('昵称不能为空!');
-					return ;
-				}
-				wsurl = 'ws://' + $('#addr').val() + ':' + $('#port').val();
-				websocket = new WebSocket(wsurl);
-				websocket.onopen = function(event)
-				{
-					nickname = $('#nickname').val();
-					$('#st').text("已连接到服务器");
-					$('#st').css('background-color', 'initial');
-				}
-				websocket.onclose = function(event)
-				{
-					$('#st').text("未连接到服务器");
-					$('#st').css('background-color', 'red');
-				}
-				websocket.onmessage = function(event)
-				{
-					var lastmsg = jQuery.parseJSON(event.data);
-					$('#msg').append("<table width='100%'><tr><td align='top' width='1px'>" + lastmsg['n'] + "：</td><td>" + lastmsg['t'] + "</td></tr></table>");
-				}
-			}
-			function send()
-			{
-				if (websocket.readyState != 1)
-				{
-					return ;
-				}
-				var txt = $('#sndtext').val();
-				var pack_msg = {t: txt, n: nickname};
-
-				websocket.send(JSON.stringify(pack_msg));
-				$('#sndtext').val('');
-			}
-			function disconn()
-			{
-				if (websocket.readyState == 1)
-				{
-					websocket.close();
-					nickname = '';
-				}
-			}
-			$('#sndbtn').bind('click', function(){send()});
-			$('#conn').bind('click', function(){conn()});
-			$('#disc').bind('click', function(){disconn()});
-		</script>
+<script>
+	var wsurl;
+	var websocket;
+	var nickname;
 	
+	if (typeof WebSocket == 'undefined')
+	{
+		alert("浏览器不支持WebSocket!");
+		window.close();
+	}
+	function conn()
+	{
+		if (websocket && websocket.readyState == 1)
+		{
+			return ;
+		}
+		if (!$('#nickname').val())
+		{
+			alert('昵称不能为空!');
+			return ;
+		}
+		wsurl = 'ws://' + $('#addr').val() + ':' + $('#port').val();
+		websocket = new WebSocket(wsurl);
+		websocket.onopen = function(event)
+		{
+			nickname = $('#nickname').val();
+			$('#st').text("已连接到服务器");
+			$('#st').css('background-color', 'initial');
+		}
+		websocket.onclose = function(event)
+		{
+			$('#st').text("未连接到服务器");
+			$('#st').css('background-color', 'red');
+		}
+		websocket.onmessage = function(event)
+		{
+			var lastmsg = jQuery.parseJSON(event.data);
+			$('#msg').append("<table width='100%'><tr><td align='top' width='1px'>" + lastmsg['n'] + "：</td><td>" + lastmsg['t'] + "</td></tr></table>");
+			$('#msg')[0].scrollTo(0,$('#msg')[0].scrollHeight);
+		}
+	}
+	function send()
+	{
+		if (websocket.readyState != 1)
+		{
+			return ;
+		}
+		var txt = $('#sndtext').val();
+		var pack_msg = {t: txt, n: nickname};
+
+		websocket.send(JSON.stringify(pack_msg));
+		$('#sndtext').val('');
+	}
+	function disconn()
+	{
+		if (websocket.readyState == 1)
+		{
+			websocket.close();
+			nickname = '';
+		}
+	}
+	$('#sndbtn').bind('click', function(){send()});
+	$('#conn').bind('click', function(){conn()});
+	$('#disc').bind('click', function(){disconn()});
+</script>
