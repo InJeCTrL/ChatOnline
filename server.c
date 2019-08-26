@@ -87,10 +87,14 @@ void* procRequest(void *data)
             memcpy(buf + len_buf, &first, 1);
             opcode = first & 0B00001111;
             len_buf++;
+            if (opcode == 8)
+            {
+                flag_disconnect = 1;
+            }
         }
-        if (len_recv <= 0 || opcode == 8)
+        else
         {
-            flag_disconnect = 1;
+            break;
         }
         if ((len_recv = recv(fd_client, &mask_len_payload, 1, 0)) > 0)
         {
@@ -127,13 +131,11 @@ void* procRequest(void *data)
             }
             if (len_recv <= 0 || (len_payload > MAXPLSIZE))
             {
-                disConnect(fd_client);
                 break;
             }
         }
         else
         {
-            disConnect(fd_client);
             break;
         }
         if ((len_recv = recv(fd_client, MaskingKey, 4, 0)) > 0)
@@ -143,7 +145,6 @@ void* procRequest(void *data)
         }
         else
         {
-            disConnect(fd_client);
             break;
         }
         if ((len_recv = recv(fd_client, payload, len_payload, 0)) > 0)
@@ -155,7 +156,6 @@ void* procRequest(void *data)
         }
         else
         {
-            disConnect(fd_client);
             break;
         }
         if (flag_disconnect)
@@ -175,6 +175,7 @@ void* procRequest(void *data)
         len_payload = 0;
         memset(buf, 0, BUFFSIZE);
     }
+    disConnect(fd_client);
 
     return S_OK;
 }
