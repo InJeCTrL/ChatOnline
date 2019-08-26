@@ -78,8 +78,9 @@ void* procRequest(void *data)
     long long len_buf = 0;
     ssize_t len_recv;
     int fd_client = *(int*)data;
+    int flag_disconnect = 0;
 
-    while (1)
+    while (!flag_disconnect)
     {
         if ((len_recv = recv(fd_client, &first, 1, 0)) > 0)
         {
@@ -89,8 +90,7 @@ void* procRequest(void *data)
         }
         if (len_recv <= 0 || opcode == 8)
         {
-            disConnect(fd_client);
-            break;
+            flag_disconnect = 1;
         }
         if ((len_recv = recv(fd_client, &mask_len_payload, 1, 0)) > 0)
         {
@@ -157,11 +157,18 @@ void* procRequest(void *data)
         {
             disConnect(fd_client);
             break;
-        }        
-        for (int i = 0; i < MAXCONN; i++)
+        }
+        if (flag_disconnect)
         {
-            if (fds_client[i])
-                send(fds_client[i], buf, len_buf, 0);
+            send(fd_client, buf, len_buf, 0);
+        }
+        else
+        {
+            for (int i = 0; i < MAXCONN; i++)
+            {
+                if (fds_client[i])
+                    send(fds_client[i], buf, len_buf, 0);
+            }
         }
         // clean
         len_buf = 0;
@@ -208,10 +215,13 @@ int procConn(int fd_servsock)
 {
     struct sockaddr_in sca;     // record addr(client)
     socklen_t len_cfd = sizeof(struct sockaddr);
+    pthread_attr_t attr_th;
     int fd_client;     // file descriptor of client socket
     pthread_t tid;
     int index_fd;
 
+    pthread_attr_init(&attr_th);
+    pthread_attr_setdetachstate(&attr_th, PTHREAD_CREATE_DETACHED);
     while (1)
     {
         if ((fd_client = accept(fd_servsock, (struct sockaddr*)&sca, &len_cfd)) < 0)
@@ -227,7 +237,7 @@ int procConn(int fd_servsock)
                     if (!fds_client[index_fd])
                     {
                         fds_client[index_fd] = fd_client;
-                        pthread_create(&tid, NULL, procRequest, (void*)&fd_client);
+                        pthread_create(&tid, &attr_th, procRequest, (void*)&fd_client);
                         break;
                     }
                 }
