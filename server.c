@@ -359,8 +359,6 @@ int procReq(int fd_client)
         }
         long long t_len = inf_head.len_Payload; 
         int num_hasRead = 0, num_hasSent = 0;
-        printf("inf_head.len_Payload = %lld\n",inf_head.len_Payload);
-        fflush(stdout);
         while (t_len > 0)
         {
             int num_toRead = (t_len > MAXPLSIZE) ? MAXPLSIZE : t_len;
@@ -368,7 +366,6 @@ int procReq(int fd_client)
             {
                 return S_FAIL;
             }
-            printf("未发送，正常\n");fflush(stdout);
             LNode *p_Node = &fdList;
             while (p_Node->next)
             {
@@ -387,12 +384,9 @@ int procReq(int fd_client)
                     }
                     break;
                 }
-                printf("发送完，正常\n");fflush(stdout);
                 p_Node = p_Node->next;
             }
             t_len -= num_hasRead;
-            printf("tlen2 = %lld\n", t_len);
-            fflush(stdout);
         }
     } while (!inf_head.FIN);
     if (inf_head.Opcode == 8)
@@ -422,8 +416,8 @@ int procConn(int fd_servsock, int fd_epoll)
         {
             pthread_mutex_lock(&mutex_List);
             addfdlist(fd_client);
-            pthread_mutex_unlock(&mutex_List);
             addEvent(fd_epoll, fd_client, EPOLLIN | EPOLLET);
+            pthread_mutex_unlock(&mutex_List);
         }
         else
         {
@@ -472,7 +466,7 @@ void* procEvent(void *data)
 int initSocket(int *fd_server)
 {
     struct sockaddr_in ssa; // record addr(server)
-    int nOptval = 1;
+    int nOptval = 1, nOptval_RCVBUF = BUFFSIZE, nOptval_SNDBUF = BUFFSIZE;
     int _fd;
     int flag;
 
@@ -482,6 +476,8 @@ int initSocket(int *fd_server)
         return S_FAIL;
     }
     setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, (void*)&nOptval, sizeof(int));
+    setsockopt(_fd, SOL_SOCKET, SO_RCVBUF, (void *)&nOptval_RCVBUF, sizeof(int));
+    setsockopt(_fd, SOL_SOCKET, SO_RCVBUF, (void *)&nOptval_SNDBUF, sizeof(int));
     memset(&ssa,0,sizeof(struct sockaddr_in));
     ssa.sin_addr.s_addr = htonl(INADDR_ANY);
     ssa.sin_family = AF_INET;
@@ -539,9 +535,9 @@ int main(int argc, char *argv[])
             pthread_mutex_lock(&mutex_Queue);
             if (addEvtQ(&evts[i_evt]) == S_OK)
             {
-                pthread_mutex_unlock(&mutex_Queue);
                 sem_post(&empty);
             }
+            pthread_mutex_unlock(&mutex_Queue);
         }
     }
     
