@@ -118,7 +118,6 @@ int analyseHead(int fd_client, info_webFramehead *headInfo)
     }
     else if (len_recv == -1 && errno == EAGAIN)
     {
-        free(headInfo);
         return S_FAIL;
     }
     // MASK(1 bit) and Payload len(7bs / 7bs+2Bs / 7bs+8Bs)
@@ -138,19 +137,15 @@ int analyseHead(int fd_client, info_webFramehead *headInfo)
         {
             if ((len_recv = recv(fd_client, tbuf, 2, 0)) > 0)
             {
-                headInfo->len_Payload = 0;
-                for (int i = 0; i < 2; i++)
-                {
-                    headInfo->len_Payload |= tbuf[i];
-                    headInfo->len_Payload <<= 8;
-                }
+                headInfo->len_Payload = tbuf[0];
+                headInfo->len_Payload <<= 8;
+                headInfo->len_Payload |= tbuf[1];
                 headInfo->ch_len_Payload[0] = 126;
                 memcpy(headInfo->ch_len_Payload + 1, tbuf, 2);
                 headInfo->len_ch = 3;
             }
             else if (len_recv == -1 && errno == EAGAIN)
             {
-                free(headInfo);
                 return S_FAIL;
             }
         }
@@ -159,11 +154,11 @@ int analyseHead(int fd_client, info_webFramehead *headInfo)
         {
             if ((len_recv = recv(fd_client, tbuf, 8, 0)) > 0)
             {
-                headInfo->len_Payload = 0;
-                for (int i = 0; i < 8; i++)
+                headInfo->len_Payload = tbuf[0];
+                for (int i = 1; i < 8; i++)
                 {
-                    headInfo->len_Payload |= tbuf[i];
                     headInfo->len_Payload <<= 8;
+                    headInfo->len_Payload |= tbuf[i];
                 }
                 headInfo->ch_len_Payload[0] = 127;
                 memcpy(headInfo->ch_len_Payload + 1, tbuf, 8);
@@ -171,17 +166,14 @@ int analyseHead(int fd_client, info_webFramehead *headInfo)
             }
             else if (len_recv == -1 && errno == EAGAIN)
             {
-                free(headInfo);
                 return S_FAIL;
             }
         }
         // protocol error
         else
         {
-            free(headInfo);
             return S_FAIL;
         }
-        
     }
     // Masking-Key(4 Bytes)
     if ((len_recv = recv(fd_client, tbuf, 4, 0)) > 0)
@@ -190,7 +182,6 @@ int analyseHead(int fd_client, info_webFramehead *headInfo)
     }
     else if (len_recv == -1 && errno == EAGAIN)
     {
-        free(headInfo);
         return S_FAIL;
     }
 
@@ -368,6 +359,8 @@ int procReq(int fd_client)
         }
         long long t_len = inf_head.len_Payload; 
         int num_hasRead = 0, num_hasSent = 0;
+        printf("inf_head.len_Payload = %lld\n",inf_head.len_Payload);
+        fflush(stdout);
         while (t_len > 0)
         {
             int num_toRead = (t_len > MAXPLSIZE) ? MAXPLSIZE : t_len;
@@ -375,6 +368,7 @@ int procReq(int fd_client)
             {
                 return S_FAIL;
             }
+            printf("未发送，正常\n");fflush(stdout);
             LNode *p_Node = &fdList;
             while (p_Node->next)
             {
@@ -393,9 +387,12 @@ int procReq(int fd_client)
                     }
                     break;
                 }
+                printf("发送完，正常\n");fflush(stdout);
                 p_Node = p_Node->next;
             }
             t_len -= num_hasRead;
+            printf("tlen2 = %lld\n", t_len);
+            fflush(stdout);
         }
     } while (!inf_head.FIN);
     if (inf_head.Opcode == 8)
@@ -475,7 +472,7 @@ void* procEvent(void *data)
 int initSocket(int *fd_server)
 {
     struct sockaddr_in ssa; // record addr(server)
-    int nOptval;
+    int nOptval = 1;
     int _fd;
     int flag;
 
