@@ -38,12 +38,35 @@ typedef struct
     unsigned char MaskingKey[4];
     unsigned char ch_len_Payload[9];
 }info_webFramehead;
+// save pointer of fd_server and fd_epoll
+typedef struct
+{
+    int *pfd_server;
+    int *pfd_epoll;
+}fds;
+// node of Queue
+typedef struct QueueNode
+{
+    struct epoll_event *pEvt;
+    struct QueueNode *next;
+}QNode;
+typedef struct
+{
+    QNode *head;
+    QNode *tail;
+}Queue;
 typedef struct ListNode
 {
     int fd;
     struct ListNode *next;
 }LNode, List;
 
+// semaphore and mutex
+sem_t empty;
+pthread_mutex_t mutex_Queue, mutex_List;
+
+// eventQueue
+Queue evtQueue;
 // list of fd_client
 List fdList = {0, NULL};
 
@@ -239,6 +262,45 @@ int handshake(int fd_client)
         return S_FAIL;
     }
 }
+// init eventQ
+int initQueue()
+{
+    evtQueue.head = NULL;
+    evtQueue.tail = NULL;
+    return S_OK;
+}
+// add event to the queue
+int addEvtQ(struct epoll_event *pEvt)
+{
+    QNode *p = (QNode*)malloc(sizeof(QNode));
+
+    if (!p)
+        return S_MEM;
+    p->pEvt = pEvt;
+    p->next = NULL;
+    // Queue is null
+    if (!evtQueue.head)
+    {
+        evtQueue.head = p;
+        evtQueue.tail = p;
+    }
+    else
+    {
+        evtQueue.tail->next = p;
+    }
+    return S_OK;
+}
+// remove queuehead and return ptr_event
+struct epoll_event* remEvtQ()
+{
+    QNode *pNode = evtQueue.head;
+    struct epoll_event *pEvt = pNode->pEvt;
+
+    evtQueue.head = pNode->next;
+    free(evtQueue.head);
+    
+    return pEvt;
+}
 // add event listener to epoll
 int addEvent(int fd_epoll, int fd, uint32_t flag)
 {
@@ -330,7 +392,9 @@ int procReq(int fd_client)
     if (inf_head.Opcode == 8)
     {
         close(fd_client);
+        pthread_mutex_lock(&mutex_List);
         remfdlist(fd_client);
+        pthread_mutex_unlock(&mutex_List);
     }
 
     return S_OK;
@@ -350,8 +414,10 @@ int procConn(int fd_servsock, int fd_epoll)
     {
         if (handshake(fd_client) == S_OK)
         {
+            pthread_mutex_lock(&mutex_List);
             addfdlist(fd_client);
             addEvent(fd_epoll, fd_client, EPOLLIN | EPOLLET);
+            pthread_mutex_unlock(&mutex_List);
         }
         else
         {
@@ -360,6 +426,41 @@ int procConn(int fd_servsock, int fd_epoll)
     }
 
     return S_OK;
+}
+// function called by threads
+void* procEvent(void *data)
+{
+    struct epoll_event *pEvt = NULL;
+    int fd_server = *(((fds*)data)->pfd_server);
+    int fd_epoll = *(((fds*)data)->pfd_epoll);
+    while (1)
+    {
+        // wait if the queue is empty
+        sem_wait(&empty);
+        // remove one event from the queue
+        pthread_mutex_lock(&mutex_Queue);
+        pEvt = remEvtQ();
+        pthread_mutex_unlock(&mutex_Queue);
+        // client is connecting
+        if (pEvt->data.fd == fd_server)
+        {
+            procConn(fd_server, fd_epoll);
+        }
+        else
+        {
+            // data in
+            if (pEvt->events & EPOLLIN)
+            {
+                if (procReq(pEvt->data.fd) == S_FAIL)
+                {
+                    close(pEvt->data.fd);
+                    pthread_mutex_lock(&mutex_List);
+                    remfdlist(pEvt->data.fd);
+                    pthread_mutex_unlock(&mutex_List);
+                }
+            }
+        }
+    }
 }
 // init serverfd
 int initSocket(int *fd_server)
@@ -402,9 +503,16 @@ int main(int argc, char *argv[])
     int fd_server = 0;
     int fd_epoll = 0;
     int num_evt = 0;
+    int num_th = 0;
     pthread_t list_th[512] = { 0 };
+    fds fd = {&fd_server, &fd_epoll};
     struct epoll_event evts[MAXEVENT];
 
+    // init mutex, semaphore and queue
+    pthread_mutex_init(&mutex_Queue, NULL);
+    pthread_mutex_init(&mutex_List, NULL);
+    sem_init(&empty, 0, 0);
+    initQueue();
     // init socket and epoll
     fd_epoll = epoll_create(5);
     if (initSocket(&fd_server) == S_FAIL)
@@ -412,29 +520,24 @@ int main(int argc, char *argv[])
         return S_FAIL;
     }
     addEvent(fd_epoll, fd_server, EPOLLIN | EPOLLET);
+    // create threads
+    num_th = sysconf(_SC_NPROCESSORS_ONLN);
+    for (int i_th = 0; i_th <= num_th; i_th++)
+    {
+        pthread_create(&list_th[i_th], NULL, procEvent, (void*)&fd);
+    }
     // loop and get event
     while(1)
     {
         num_evt = epoll_wait(fd_epoll, evts, MAXEVENT, -1);
         for (int i_evt = 0; i_evt < num_evt; i_evt++)
         {
-            // client is connecting
-            if (evts[i_evt].data.fd == fd_server)
+            pthread_mutex_lock(&mutex_Queue);
+            if (addEvtQ(&evts[i_evt]) == S_OK)
             {
-                procConn(fd_server, fd_epoll);
+                sem_post(&empty);
             }
-            else
-            {
-                // data in
-                if (evts[i_evt].events & EPOLLIN)
-                {
-                    if (procReq(evts[i_evt].data.fd) == S_FAIL)
-                    {
-                        close(evts[i_evt].data.fd);
-                        remfdlist(evts[i_evt].data.fd);
-                    }
-                }
-            }
+            pthread_mutex_unlock(&mutex_Queue);
         }
     }
     
