@@ -2,16 +2,83 @@
 <html>
 	<head>
 		<meta charset="utf-8" />
-		<title></title>
+		<title>ChatOnline</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<link rel="stylesheet" href="http://cdn.bootcss.com/bootstrap/3.3.0/css/bootstrap.min.css">
 	</head>
-	<link rel="stylesheet" href="http://cdn.bootcss.com/bootstrap/3.3.0/css/bootstrap.min.css">
     <script src="http://cdn.bootcss.com/jquery/1.11.1/jquery.min.js"></script>
     <script src="http://cdn.bootcss.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
-	<body style="position: absolute;width: 100%;height: 100%;">
+    <script src="https://cdn.bootcss.com/jquery-ui-bootstrap/0.5pre/assets/js/jquery-ui-1.10.0.custom.min.js"></script>
+    <style>
+    	html, body{
+    		height: 100%;
+    		background-color: azure;
+    	}
+    </style>
+	<body>
+		<nav id="nav" class="navbar navbar-default navbar-fixed-top" style="background-color: paleturquoise;">
+		    <div class="navbar-header">
+		    	<a class="navbar-brand" href="#">ChatOnline</a>
+		    	<a class="navbar-toggle" style="background-color: burlywood;" data-toggle="collapse" data-target=".navbar-collapse">
+		        	<span class="icon-bar" style="background-color: whitesmoke;"></span>
+		            <span class="icon-bar" style="background-color: whitesmoke;"></span>
+		            <span class="icon-bar" style="background-color: whitesmoke;"></span>
+		        </a>
+		    </div>
+		    <div class="collapse navbar-collapse navbar-right">
+		        <ul class="nav navbar-nav">
+		        	<li class="bg-success"><a id="NickName" name="NickName" href="#">当前昵称：</a></li>
+		        	<li class="bg-warning"><a id="ReNick" name="ReNick" href="#">自定义昵称</a></li>
+		            <li class="bg-danger"><a id="Exit" name="Exit" href="#">退出</a></li>
+		        </ul>
+		    </div>
+		</nav>
+		<div class="modal fade" id="SetNickBox" aria-hidden="true" data-backdrop="static">  
+		    <div class="modal-dialog">  
+		        <div class="modal-content">
+		            <div class="modal-header btn-success">  
+		                <h4 class="modal-title">自定义昵称</h4>
+		            </div>
+		            <div class="modal-body">
+		            	若使用默认的随机昵称请点击忽略
+		                <input class="form-control" type="text" name="nicktext" id="nicktext" placeholder="昵称（不超过20字）" />
+		            </div> 
+		            <div class="modal-footer">
+		            	<label id="NickTip" style="color: red;"></label>
+		            	<button type="button" class="btn btn-primary" data-dismiss="modal">忽略</button> 
+		                <button id="SetNickBtn" name="SetNickBtn" type="button" class="btn btn-success">提交设置</button>  
+		            </div>  
+		        </div>
+		    </div>
+		</div>
+		<div class="modal fade" id="tipbox" aria-hidden="true" data-backdrop="static">
+		    <div class="modal-dialog">
+		        <div class="modal-content">
+		            <div class="modal-header btn-danger">
+		                <h4 class="modal-title">系统提示</h4>
+		            </div>
+		            <div class="modal-body text-center" id="tipmsg"></div>
+		            <div class="modal-footer">
+		                <button type="button" class="btn btn-primary" data-dismiss="modal">关闭</button>
+		            </div>
+		        </div>
+		    </div>
+		</div>
+		<div class="container" style="height: 100%;padding-top: 50px;">
+			<div id="msg" name="msg" class="row" style="height: 85%;padding: 10px;border: solid;border-spacing: 5px;border-width: 3px;border-color: lightseagreen;overflow-y: scroll;background-color: rgba(100,200,200,0.1);">
+			</div>
+			<div class="row" style="height: 15%;border: solid;border-width: 3px;border-color: dodgerblue;">
+            	<div class="input-group" style="height: 100%;width: 100%;">
+                    <textarea id="sndtext" name="sndtext" class="form-control custom-control" style="height: 100%;resize: none;padding: 0px;"></textarea>
+                    <span id="send" name="send" class="input-group-addon btn btn-primary" type="button" style="height: 100%;">发送！</span>
+                </div>
+			</div>
+		</div>
+<!--
 		<div class="modal fade" id="Dlg_Conn" tabindex="-1" role="dialog" aria-labelledby="Dlg_Conn">  
 			    <div class="modal-dialog" role="document">  
-			        <div class="modal-content">  
+			        <div class="modal-content">
+			        	
 			            <div class="modal-header btn-danger">   
 			                <h4 class="modal-title" id="myModalLabel">未连接到服务器</h4>  
 			            </div>
@@ -38,13 +105,15 @@
 			                		</div>
 			                	</div>
 			                </form>
-			            </div>  
+			            </div> 
 			            <div class="modal-footer">    
 			                <button id="conn" name="conn" type="button" class="btn btn-primary">连接</button>  
 			            </div>  
 			        </div>  
+			        
 			    </div>  
 			</div>
+			
 		<div class="container" style="height: 100%;">
 			<div id="msg" name="msg" class="row" style="padding: 10px;height: 85%;border: groove;border-spacing: 5px;border-width: 5px;border-color: springgreen;overflow-y: scroll;">
 			</div>
@@ -59,81 +128,97 @@
 	            </div>
 			</div>
 		</div>
+		-->
 	</body>
 	<script>
-		$('#send').bind('click', function(){send()});
-		$('#conn').bind('click', function(){conn()});
-		$('#Dlg_Conn').modal({backdrop: false});
-		var wsurl;
-		var websocket;
-		var nickname;
-		
 		if (typeof WebSocket == 'undefined')
 		{
 			alert("浏览器不支持WebSocket!");
 			window.close();
 		}
-		function conn()
+		var wsurl = 'ws://127.0.0.1:666';
+		var websocket = new WebSocket(wsurl);
+		websocket.onopen = function(event)
 		{
-			if (websocket && websocket.readyState != 3)
+			$('#SetNickBox').modal('show');
+		}
+		websocket.onclose = function(event)
+		{
+			ShowTipBox("与服务器的连接失效</br>请刷新页面尝试重新连接！");
+		}
+		websocket.onmessage = function(event)
+		{
+			var recvmsg = JSON.parse(event.data);
+			switch (recvmsg['Type'])
 			{
-				return ;
-			}
-			if (!$('#addr').val())
-			{
-				$('#addr').css('border-color', 'red');
-				return ;
-			}
-			else
-			{
-				$('#addr').css('border-color', '');
-			}
-			if (!$('#port').val())
-			{
-				$('#port').css('border-color', 'red');
-				return ;
-			}
-			else
-			{
-				$('#port').css('border-color', '');
-			}
-			if (!$('#nick').val())
-			{
-				$('#nick').css('border-color', 'red');
-				return ;
-			}
-			else
-			{
-				$('#nick').css('border-color', '');
-			}
-			wsurl = 'ws://' + $('#addr').val() + ':' + $('#port').val();
-			websocket = new WebSocket(wsurl);
-			websocket.onopen = function(event)
-			{
-				nickname = $('#nick').val();
-				$('#Dlg_Conn').modal('hide');
-			}
-			websocket.onclose = function(event)
-			{
-				$('#Dlg_Conn').modal({backdrop: false});
-			}
-			websocket.onmessage = function(event)
-			{
-				var lastmsg = jQuery.parseJSON(event.data);
-				$('#msg').append("<div>" + lastmsg['n'] + " 发言</div><div style='border-bottom-right-radius: 20px;border: solid;padding: 10px;border-color: darksalmon;margin-bottom: 10px;word-break: break-all;display:inline-block;'>" + lastmsg['t'] + "</div>");
-				$('#msg')[0].scrollTo(0, $('#msg')[0].scrollHeight);
+				case 'SetNickErr':
+					$('#NickTip').text(recvmsg['Data']);
+					break;
+				case 'SetNickOK':
+					$('#SetNickBox').modal('hide');
+					$('#NickName').text('当前昵称：' + recvmsg['Data']);
+					break;
+				case 'SetNickDefault':
+					$('#NickName').text('当前昵称：' + recvmsg['Data']);
+					break;
+				case 'RoomMsg':
+					$('#msg').append($("<div></div>").text(recvmsg['NickName'] + '：'),
+									$("<div style='white-space: pre-wrap;border-bottom-right-radius: 20px;padding: 10px;background-color: rgba(0, 200, 0, 0.5);box-shadow: 2px 3px 3px gray;margin-bottom: 10px;word-break: break-all;display:inline-block;'></div>").text(recvmsg['Data']));
+					$('#msg').scrollTop($('#msg').prop("scrollHeight"));
+					break;
+				case 'RoomSysMsg':
+					$('#msg').append($("<p class='text-center' style='border-radius: 15px;padding: 5px;background-color: rgba(10, 10, 10, 0.1);margin-bottom: 10px;'>123</p>").text(recvmsg['Data']));
+					$('#msg').scrollTop($('#msg').prop("scrollHeight"));
+					break;
+				default:
+					break;
 			}
 		}
-		function send()
+		// 显示系统提示
+		function ShowTipBox(TipStr)
 		{
-			if (websocket.readyState != 1)
+			$('#tipmsg').html(TipStr);
+			$('#tipbox').modal('show');
+		}
+		// 客户端发送命令
+		function SendRawData(JsonStr)
+		{
+			if (websocket.readyState == 1)
 			{
-				return ;
+				websocket.send(JSON.stringify(JsonStr));
 			}
-			var txt = $('#sndtext').val();
-			var pack_msg = {t: txt, n: nickname};
-			websocket.send(JSON.stringify(pack_msg));
+		}
+		// 发送聊天消息
+		function SendChatMsg(Message)
+		{
+			var Data = {"Type":"RoomMsg", "Data":Message};
+			SendRawData(Data);
+		}
+		// 设置昵称
+		function SetNickName(NewNick)
+		{
+			var Data = {"Type":"SetNickName", "Data":NewNick};
+			SendRawData(Data);
+		}
+		$('#chat').draggable();
+		$('#ReNick').bind('click', function(){
+			$('#SetNickBox').modal('show');
+		});
+		$('#SetNickBtn').bind('click', function(){
+			SetNickName($('#nicktext').val());
+		});
+		$('#send').bind('click', function(){
+			SendChatMsg($('#sndtext').val());
 			$('#sndtext').val('');
-		}
+		});
+		$('#Exit').bind('click', function(){
+			location.reload();
+		});
+		$(document).keydown(function (event){
+            if (event.ctrlKey && event.keyCode == 13){
+              	SendChatMsg($('#sndtext').val());
+				$('#sndtext').val('');
+            }
+     	});
 	</script>
 </html>
